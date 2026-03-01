@@ -39,7 +39,7 @@ const CircularProgress = ({ value, max }: { value: number; max: number }) => {
 const OperationCard = ({
   type, resolved, onStart
 }: { type: Operation; resolved: number; onStart: (op: Operation, count: number) => void; key?: React.Key }) => {
-  const [count, setCount] = useState(10);
+  const [count, setCount] = useState(50);
   const config = OPERATION_CONFIG[type];
   const Icon = config.icon;
 
@@ -61,7 +61,7 @@ const OperationCard = ({
           <input
             className="w-full bg-slate-800/50 border-none rounded-lg text-sm text-white focus:ring-1 focus:ring-primary p-2 outline-none"
             type="number"
-            min={10} max={200}
+            min={50} max={200}
             value={count}
             onChange={(e) => setCount(Number(e.target.value))}
           />
@@ -164,6 +164,40 @@ const StatsView = ({ stats }: { stats: UserStats }) => {
             );
           })}
         </div>
+
+        {stats.recentErrors && stats.recentErrors.length > 0 && (
+          <div className="mt-8">
+            <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-4">Erros Recentes</h3>
+            <div className="space-y-3">
+              {stats.recentErrors.map((error) => {
+                const config = OPERATION_CONFIG[error.operation];
+                const Icon = config?.icon;
+                const date = new Date(error.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+                return (
+                  <div key={error.id} className="bg-red-500/5 border border-red-500/10 p-4 rounded-xl flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {Icon && <div className="p-2 bg-red-500/20 rounded-lg text-red-500"><Icon className="size-4" /></div>}
+                      <div>
+                        <div className="text-white font-bold text-lg tracking-wider">
+                          {error.num1} {error.operation === 'addition' ? '+' : error.operation === 'subtraction' ? '-' : error.operation === 'multiplication' ? 'x' : '÷'} {error.num2}
+                        </div>
+                        <div className="text-xs text-slate-500">{date}</div>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <div className="text-xs text-slate-400 mb-1">Você {error.user_answer !== null ? `respondeu:` : `não respondeu.`}</div>
+                      {error.user_answer !== null && <div className="text-red-400 font-bold line-through">{error.user_answer}</div>}
+                      <div className="text-neon-green font-bold text-lg mt-0.5">{error.correct_answer}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
       </main>
     </motion.div>
   );
@@ -259,7 +293,7 @@ const ProfileView = ({ userEmail, profile, onSignOut, fetchProfile }: any) => {
               <label className="text-xs font-medium text-slate-400 mb-1 block">Meta diária (questões)</label>
               <input
                 className="w-full bg-slate-900 border border-primary/20 rounded-lg p-3 text-white focus:ring-2 focus:ring-primary outline-none"
-                type="number" value={goal} onChange={(e) => setGoal(Number(e.target.value))} min={10} max={1000}
+                type="number" value={goal} onChange={(e) => setGoal(Number(e.target.value))} min={50} max={1000}
               />
             </div>
             <button onClick={handleSave} disabled={saving} className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-lg transition-all active:scale-95 shadow-lg shadow-primary/20 mt-2">
@@ -306,7 +340,11 @@ export default function App() {
 
   const fetchStats = async () => {
     if (!session?.user?.id) return;
-    const { data, error } = await supabase.from('exercises').select('*').eq('user_id', session.user.id);
+    const { data, error } = await supabase.from('exercises')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .order('created_at', { ascending: false });
+
     if (error || !data) return;
 
     const newStats: UserStats = {
@@ -315,6 +353,7 @@ export default function App() {
       errors: { addition: 0, subtraction: 0, multiplication: 0, division: 0 },
       dailyGoal: profile?.daily_goal || 50,
       dailyProgress: 0,
+      recentErrors: [],
     };
 
     const today = new Date().toISOString().split('T')[0];
@@ -326,8 +365,15 @@ export default function App() {
       if (!newStats.errors[op]) newStats.errors[op] = 0;
 
       newStats.resolved[op]++;
-      if (ex.is_correct) newStats.hits[op]++;
-      else newStats.errors[op]++;
+      if (ex.is_correct) {
+        newStats.hits[op]++;
+      } else {
+        newStats.errors[op]++;
+        // Store max 15 recent errors
+        if (newStats.recentErrors.length < 15) {
+          newStats.recentErrors.push(ex);
+        }
+      }
 
       // Check if it was done today
       const exDate = ex.created_at.split('T')[0];
@@ -349,7 +395,7 @@ export default function App() {
   const handleStartExercise = async (op: Operation, count: number) => {
     if (!session?.user?.id) return;
     // Generate questions matching the 80/20 rule and count bounds
-    const safeCount = Math.max(10, Math.min(200, count));
+    const safeCount = Math.max(50, Math.min(200, count));
     const qs = await generateExerciseSet(session.user.id, op, safeCount);
     setActiveQuestions(qs);
     setActiveOperation(op);
@@ -383,13 +429,13 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-background-dark text-slate-100 pb-20">
+    <div className="min-h-screen bg-background-dark text-slate-100 pb-28">
       <AnimatePresence mode="wait">
         {renderScreen()}
       </AnimatePresence>
 
       {currentScreen !== 'exercise' && (
-        <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-md z-50">
+        <nav className="fixed bottom-12 left-1/2 -translate-x-1/2 w-[90%] max-w-md z-50">
           <div className="bg-slate-900/80 backdrop-blur-xl border border-primary/20 rounded-2xl flex items-center justify-around p-3 shadow-2xl shadow-primary/20">
             <button onClick={() => setCurrentScreen('home')} className={`flex flex-col items-center gap-1 transition-colors ${currentScreen === 'home' ? 'text-primary' : 'text-slate-400'}`}>
               <Home className={`size-6 ${currentScreen === 'home' ? 'fill-primary' : ''}`} />
