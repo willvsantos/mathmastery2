@@ -157,46 +157,45 @@ const StatsView = ({ stats }: { stats: UserStats }) => {
                     <span className="text-xl font-bold text-primary">{precision}%</span>
                   </div>
                 </div>
-                <div className="mt-4 h-1.5 w-full bg-primary/10 rounded-full overflow-hidden">
+                <div className="mt-4 h-1.5 w-full bg-primary/10 rounded-full overflow-hidden mb-4">
                   <div className="h-full bg-neon-green transition-all duration-1000" style={{ width: `${precision}%` }}></div>
                 </div>
+
+                {/* Historico de Erros Específico Desta Operação */}
+                {stats.recentErrors && stats.recentErrors.filter(e => e.operation === op).length > 0 && (
+                  <div className="pt-4 border-t border-primary/10">
+                    <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Últimas Contas Erradas</h5>
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1 stylish-scrollbar">
+                      {stats.recentErrors.filter(e => e.operation === op).map((error) => {
+                        return (
+                          <div key={error.id} className="bg-red-500/10 border border-red-500/20 p-2.5 rounded-lg flex items-center justify-between">
+                            <div>
+                              <div className="text-white font-bold tracking-wider text-sm">
+                                {error.num1} {error.operation === 'addition' ? '+' : error.operation === 'subtraction' ? '-' : error.operation === 'multiplication' ? 'x' : '÷'} {error.num2}
+                              </div>
+                            </div>
+                            <div className="text-right flex items-center gap-3">
+                              <div className="text-center">
+                                <div className="text-[9px] text-slate-500 uppercase">Sua Resp.</div>
+                                <div className="text-red-400 font-bold text-sm line-through leading-none mt-0.5">{error.user_answer !== null ? error.user_answer : '-'}</div>
+                              </div>
+                              <div className="w-px h-6 bg-slate-700"></div>
+                              <div className="text-center">
+                                <div className="text-[9px] text-slate-500 uppercase">Correto</div>
+                                <div className="text-neon-green font-bold text-base leading-none mt-0.5">{error.correct_answer}</div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
 
-        {stats.recentErrors && stats.recentErrors.length > 0 && (
-          <div className="mt-8">
-            <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-4">Erros Recentes</h3>
-            <div className="space-y-3">
-              {stats.recentErrors.map((error) => {
-                const config = OPERATION_CONFIG[error.operation];
-                const Icon = config?.icon;
-                const date = new Date(error.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-
-                return (
-                  <div key={error.id} className="bg-red-500/5 border border-red-500/10 p-4 rounded-xl flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      {Icon && <div className="p-2 bg-red-500/20 rounded-lg text-red-500"><Icon className="size-4" /></div>}
-                      <div>
-                        <div className="text-white font-bold text-lg tracking-wider">
-                          {error.num1} {error.operation === 'addition' ? '+' : error.operation === 'subtraction' ? '-' : error.operation === 'multiplication' ? 'x' : '÷'} {error.num2}
-                        </div>
-                        <div className="text-xs text-slate-500">{date}</div>
-                      </div>
-                    </div>
-
-                    <div className="text-right">
-                      <div className="text-xs text-slate-400 mb-1">Você {error.user_answer !== null ? `respondeu:` : `não respondeu.`}</div>
-                      {error.user_answer !== null && <div className="text-red-400 font-bold line-through">{error.user_answer}</div>}
-                      <div className="text-neon-green font-bold text-lg mt-0.5">{error.correct_answer}</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
       </main>
     </motion.div>
