@@ -7,10 +7,17 @@
   # Use https://search.nixos.org/packages to find packages
   packages = [
     pkgs.nodejs_22
+    pkgs.jdk17
+    pkgs.android-tools
   ];
 
   # Sets environment variables in the workspace
-  env = {};
+  env = {
+    # Necessário para o Gradle achar o Java ao compilar o Android
+    JAVA_HOME = "${pkgs.jdk17}/lib/openjdk";
+    # Opcional, caso o SDK do Android não seja detectado automaticamente pelo Capacitor
+    # ANDROID_HOME = "...";
+  };
   
   idx = {
     # Search for the extensions you want on https://open-vsx.org/ and use "publisher.id"
